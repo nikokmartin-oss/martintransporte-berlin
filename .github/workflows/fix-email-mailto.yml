@@ -1,0 +1,44 @@
+name: Fix both email buttons with mailto
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-email-mailto.yml'
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set both desktop and mobile email buttons to mailto
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          address = 'niko.k.martin@gmail.com'
+          subject = 'Angebotsanfrage%20Martin%20Transporte'
+          pattern = re.compile(r'<a class="btn secondary email-(desktop|mobile)"[^>]*>E-Mail</a>')
+
+          matches = pattern.findall(s)
+          if len(matches) != 4 or matches.count('desktop') != 2 or matches.count('mobile') != 2:
+              raise SystemExit(f'Expected exactly 2 desktop + 2 mobile email button anchors, found: {matches}')
+
+          def repl(m):
+              kind = m.group(1)
+              return f'<a class="btn secondary email-{kind}" href="mailto:{address}?subject={subject}">E-Mail</a>'
+
+          s2 = pattern.sub(repl, s)
+          p.write_text(s2, encoding='utf-8')
+          print('Both website email buttons now use standard mailto links on desktop and mobile.')
+          PY
+      - name: Commit fix and remove workflow
+        run: |
+          rm .github/workflows/fix-email-mailto.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html .github/workflows/fix-email-mailto.yml
+          git commit -m 'Use mailto for both email buttons on desktop and mobile'
+          git push

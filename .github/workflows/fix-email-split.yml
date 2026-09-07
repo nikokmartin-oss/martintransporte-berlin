@@ -1,0 +1,34 @@
+name: Fix email split buttons
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-email-split.yml'
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Split desktop and mobile email buttons
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          old = '<a class="btn secondary" href="https://mail.google.com/mail/?view=cm&fs=1&to=niko.k.martin@gmail.com&su=Angebotsanfrage%20Martin%20Transporte" onclick="if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) { this.href=\'mailto:niko.k.martin@gmail.com\'; }">E-Mail</a>'
+          new = '''<style>.email-mobile{display:none}@media (max-width:768px){.email-desktop{display:none!important}.email-mobile{display:inline-flex!important}}</style><a class="btn secondary email-desktop" href="https://mail.google.com/mail/?view=cm&fs=1&to=niko.k.martin@gmail.com&su=Angebotsanfrage%20Martin%20Transporte" target="_blank" rel="noopener noreferrer">E-Mail</a><a class="btn secondary email-mobile" href="mailto:niko.k.martin@gmail.com?subject=Angebotsanfrage%20Martin%20Transporte">E-Mail</a>'''
+          n = s.count(old)
+          if n != 1:
+              raise SystemExit(f'Expected exactly 1 current email button, found {n}')
+          p.write_text(s.replace(old, new), encoding='utf-8')
+          print('Replaced exactly one email button with separate desktop/mobile links')
+          PY
+      - name: Commit fix and remove workflow
+        run: |
+          rm .github/workflows/fix-email-split.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html .github/workflows/fix-email-split.yml
+          git commit -m 'Use separate desktop and mobile email links'
+          git push

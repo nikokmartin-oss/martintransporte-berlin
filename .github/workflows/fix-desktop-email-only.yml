@@ -1,0 +1,36 @@
+name: Fix desktop email links only
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-desktop-email-only.yml'
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Change only desktop email anchors to Gmail compose
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          pattern = re.compile(r'<a class="btn secondary email-desktop"[^>]*>E-Mail</a>')
+          matches = pattern.findall(s)
+          if len(matches) != 2:
+              raise SystemExit(f'Expected exactly 2 desktop email anchors, found {len(matches)}')
+          new = '<a class="btn secondary email-desktop" href="https://mail.google.com/mail/?view=cm&fs=1&to=niko.k.martin@gmail.com&su=Angebotsanfrage%20Martin%20Transporte" target="_blank" rel="noopener noreferrer">E-Mail</a>'
+          s = pattern.sub(new, s)
+          p.write_text(s, encoding='utf-8')
+          print('Changed exactly 2 desktop email anchors; mobile anchors untouched.')
+          PY
+      - name: Commit fix and remove workflow
+        run: |
+          rm .github/workflows/fix-desktop-email-only.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html .github/workflows/fix-desktop-email-only.yml
+          git commit -m 'Fix desktop email buttons without touching mobile'
+          git push

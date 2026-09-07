@@ -1,0 +1,35 @@
+name: Mirror working email button behavior
+on:
+  push:
+    paths:
+      - '.github/workflows/mirror-working-email-buttons.yml'
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Copy known-good upper behavior to lower button
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          old = '<a class="btn secondary" href="https://mail.google.com/mail/?view=cm&fs=1&to=niko.k.martin@gmail.com&su=Transportanfrage" target="_blank" rel="noopener noreferrer">E-Mail</a>'
+          new = '<a class="btn secondary email-desktop" href="https://mail.google.com/mail/?view=cm&fs=1&to=niko.k.martin@gmail.com&su=Angebotsanfrage%20Martin%20Transporte" target="_blank" rel="noopener noreferrer">E-Mail</a><a class="btn secondary email-mobile" href="https://mail.google.com/mail/?view=cm&fs=1&to=niko.k.martin@gmail.com&su=Angebotsanfrage%20Martin%20Transporte">E-Mail</a>'
+          n = s.count(old)
+          if n != 1:
+              raise SystemExit(f'Expected exactly one lower email button, found {n}')
+          s = s.replace(old, new)
+          p.write_text(s, encoding='utf-8')
+          print('Lower button now mirrors the known-good upper desktop/mobile behavior exactly')
+          PY
+      - name: Commit and remove workflow
+        run: |
+          rm .github/workflows/mirror-working-email-buttons.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html .github/workflows/mirror-working-email-buttons.yml
+          git commit -m 'Mirror known-good upper email behavior to lower button'
+          git push

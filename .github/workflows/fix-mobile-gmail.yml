@@ -1,0 +1,34 @@
+name: Fix mobile Gmail compose
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-mobile-gmail.yml'
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Change only mobile email link
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          old = '<a class="btn secondary email-mobile" href="mailto:niko.k.martin@gmail.com?subject=Angebotsanfrage%20Martin%20Transporte">E-Mail</a>'
+          new = '<a class="btn secondary email-mobile" href="https://mail.google.com/mail/?view=cm&fs=1&to=niko.k.martin@gmail.com&su=Angebotsanfrage%20Martin%20Transporte">E-Mail</a>'
+          n = s.count(old)
+          if n != 1:
+              raise SystemExit(f'Expected exactly 1 mobile email link, found {n}')
+          p.write_text(s.replace(old, new), encoding='utf-8')
+          print('Changed exactly one mobile email link')
+          PY
+      - name: Commit fix and remove workflow
+        run: |
+          rm .github/workflows/fix-mobile-gmail.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html .github/workflows/fix-mobile-gmail.yml
+          git commit -m 'Open Gmail compose on mobile email button'
+          git push
